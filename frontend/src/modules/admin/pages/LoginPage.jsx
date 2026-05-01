@@ -26,7 +26,7 @@ const LoginPage = () => {
                 login(res.data.user, res.data.token);
                 navigate('/admin/dashboard');
             } else {
-                setError(data.message || 'Invalid administrative credentials');
+                setError(res?.message || 'Invalid administrative credentials');
             }
         } catch (err) {
             setError(err.message || 'Network error occurred');

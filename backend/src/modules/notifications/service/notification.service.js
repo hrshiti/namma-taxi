@@ -25,6 +25,11 @@ const TEMPLATES = {
     sms: `Namma Taxi: Refund of ₹${data.amount} for booking ${data.bookingRef} has been processed successfully.`,
     emailSubject: `Refund Processed - ${data.bookingRef}`,
     emailBody: `Hello ${data.customerName},\n\nA refund of ₹${data.amount} for your booking ${data.bookingRef} has been processed.\n\nIt should reflect in your account within 5-7 business days.\n\nThank you.`
+  }),
+  support_update: (data) => ({
+    sms: `Namma Taxi: Support Case ${data.caseRef} status updated to ${data.status.toUpperCase()}. Sub: ${data.subject}`,
+    emailSubject: `Support Case Update - ${data.caseRef}`,
+    emailBody: `Hello,\n\nYour support case (${data.caseRef}) regarding booking ${data.bookingRef || 'N/A'} has been updated.\n\nNew Status: ${data.status.toUpperCase()}\nSubject: ${data.subject}\n\nOur team is working on your request.\n\nThank you for your patience.`
   })
 };
 

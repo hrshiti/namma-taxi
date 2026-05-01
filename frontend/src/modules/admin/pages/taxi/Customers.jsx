@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Search, PlusCircle, Mail, ChevronLeft, ChevronRight, ListFilter, User, Phone, Calendar, Loader2 } from 'lucide-react';
+import { Search, PlusCircle, Mail, ChevronLeft, ChevronRight, ListFilter, User, Phone, Calendar, Loader2, Eye, UserX, UserCheck, ShieldCheck, ShieldOff } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../../../lib/api';
 
 const Customers = () => {
+    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -18,6 +20,15 @@ const Customers = () => {
             console.error('Failed to fetch customers:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleToggleStatus = async (id, currentStatus) => {
+        try {
+            await api.patch(`/customers/${id}`, { isActive: !currentStatus });
+            setCustomers(customers.map(c => c._id === id ? { ...c, isActive: !currentStatus } : c));
+        } catch (error) {
+            console.error('Failed to toggle status:', error);
         }
     };
 
@@ -98,7 +109,8 @@ const Customers = () => {
                             <th className="px-4 py-4 text-left text-[11px] font-black text-black uppercase tracking-widest border-r border-gray-200">Contact Channels</th>
                             <th className="px-4 py-4 text-center text-[11px] font-black text-black uppercase tracking-widest border-r border-gray-200 w-[120px]">Rides</th>
                             <th className="px-4 py-4 text-left text-[11px] font-black text-black uppercase tracking-widest border-r border-gray-200 w-[150px]">Verification</th>
-                            <th className="px-4 py-4 text-left text-[11px] font-black text-black uppercase tracking-widest">Enrollment Date</th>
+                            <th className="px-4 py-4 text-left text-[11px] font-black text-black uppercase tracking-widest border-r border-gray-200">Enrollment Date</th>
+                            <th className="px-4 py-4 text-right text-[11px] font-black text-black uppercase tracking-widest">Operations</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -156,7 +168,7 @@ const Customers = () => {
                                     </span>
                                     <p className="text-[8px] font-black text-gray-400 uppercase mt-1">Platform Auth</p>
                                 </td>
-                                <td className="px-4 py-4">
+                                <td className="px-4 py-4 border-r border-gray-200">
                                     <div className="flex items-center gap-2">
                                         <Calendar size={12} className="text-gray-400" />
                                         <p className="text-[11px] font-black text-gray-500 uppercase">
@@ -164,6 +176,24 @@ const Customers = () => {
                                         </p>
                                     </div>
                                     <p className="text-[9px] font-bold text-gray-400 uppercase mt-0.5">{(new Date(item.createdAt)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                </td>
+                                <td className="px-4 py-4 text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                        <button 
+                                            onClick={() => navigate(`/admin/users/view/${item._id}`)}
+                                            className="p-2 bg-gray-50 text-gray-400 hover:text-black hover:bg-gray-100 rounded-lg transition-all"
+                                            title="Inspect Profile"
+                                        >
+                                            <Eye size={14} />
+                                        </button>
+                                        <button 
+                                            onClick={() => handleToggleStatus(item._id, item.isActive !== false)}
+                                            className={`p-2 rounded-lg transition-all ${item.isActive !== false ? 'bg-red-50 text-red-500 hover:bg-red-100' : 'bg-emerald-50 text-emerald-500 hover:bg-emerald-100'}`}
+                                            title={item.isActive !== false ? 'Suspend Account' : 'Restore Account'}
+                                        >
+                                            {item.isActive !== false ? <ShieldOff size={14} /> : <ShieldCheck size={14} />}
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}

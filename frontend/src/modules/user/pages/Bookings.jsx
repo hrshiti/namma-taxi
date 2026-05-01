@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../lib/api';
+import socket from '../../../lib/socket';
 
 const Bookings = () => {
     const [selectedBooking, setSelectedBooking] = useState(null);
@@ -26,8 +27,19 @@ const Bookings = () => {
 
     useEffect(() => {
         fetchBookings();
-        const interval = setInterval(() => fetchBookings(true), 10000);
-        return () => clearInterval(interval);
+        
+        // Listen for real-time updates
+        const handleUpdate = (updatedBooking) => {
+            fetchBookings(true); // Silent refresh
+        };
+
+        socket.on('booking_updated', handleUpdate);
+        socket.on('booking_cancelled', handleUpdate);
+
+        return () => {
+            socket.off('booking_updated', handleUpdate);
+            socket.off('booking_cancelled', handleUpdate);
+        };
     }, [selectedBooking?._id]);
 
     if (selectedBooking) {
@@ -64,6 +76,12 @@ const Bookings = () => {
                                     </span>
                                 )}
                             </div>
+                            {selectedBooking.startOTP && !['completed', 'cancelled'].includes(selectedBooking.status) && (
+                                <div className="mt-4 bg-[#F7DC9D]/20 border border-[#F7DC9D]/30 rounded-2xl p-3 flex justify-between items-center">
+                                    <span className="text-[10px] font-black text-black uppercase tracking-widest">Start OTP</span>
+                                    <span className="text-lg font-black text-black tracking-[0.3em]">{selectedBooking.startOTP}</span>
+                                </div>
+                            )}
                         </div>
                         <div className="flex flex-col items-end gap-2">
                             <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase ${

@@ -22,7 +22,9 @@ export async function getDashboardStats(range = 'all') {
     planningStats,
     payoutBatchCount,
     supportStats,
-    alertSummary
+    alertSummary,
+    customerCount,
+    vehicleCount
   ] = await Promise.all([
     // 1. Booking counts by status
     Booking.aggregate([
@@ -105,7 +107,13 @@ export async function getDashboardStats(range = 'all') {
     ]),
 
     // 10. Alert Summary
-    (await import('../../alerts/service/alert.service.js')).getAlertSummary(range)
+    (await import('../../alerts/service/alert.service.js')).getAlertSummary(range),
+
+    // 11. Customer Count
+    (await import('../../customers/model/customer.model.js')).default.countDocuments({ isDeleted: { $ne: true } }),
+
+    // 12. Vehicle Count
+    (await import('../../vehicles/model/vehicle.model.js')).default.countDocuments({ isDeleted: { $ne: true } })
   ]);
 
   // Format booking stats
@@ -179,7 +187,7 @@ export async function getDashboardStats(range = 'all') {
           $and: [
             { $eq: ['$status', 'completed'] },
             { $eq: ['$paymentStatus', 'paid'] },
-            { $eq: [{ $size: '$earning' }, 0] }
+            { $eq: [{ $size: { $ifNull: ['$earning', []] } }, 0] }
           ]
         },
         isRefundedButPaid: {
@@ -198,11 +206,27 @@ export async function getDashboardStats(range = 'all') {
     { $count: 'count' }
   ]);
 
+  // 13. Revenue Trend (Daily for the last 30 days)
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const trendData = await Payment.aggregate([
+    { $match: { createdAt: { $gte: thirtyDaysAgo }, status: 'paid' } },
+    {
+      $group: {
+        _id: { $dateToString: { format: "%b %d", date: "$createdAt" } },
+        total: { $sum: "$amount" },
+        rawDate: { $first: "$createdAt" }
+      }
+    },
+    { $sort: { rawDate: 1 } },
+    { $project: { date: "$_id", value: "$total", _id: 0 } }
+  ]);
+
   finance.exceptionCount = exceptions[0]?.count || 0;
 
   return {
     bookings,
     revenue,
+    revenueTrend: trendData,
     drivers,
     settlements,
     planning,
@@ -210,6 +234,8 @@ export async function getDashboardStats(range = 'all') {
     alerts: alertSummary,
     finance,
     recentBookings,
+    customerCount,
+    vehicleCount,
     range
   };
 }

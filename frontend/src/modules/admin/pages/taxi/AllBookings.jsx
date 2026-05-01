@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, Download, Eye, Trash2, CheckCircle, XCircle, Clock, ChevronDown, Bell, Calendar, Sparkles } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import api from '../../../../lib/api';
+import socket from '../../../../lib/socket';
 import SmartDispatchPicker from '../../components/SmartDispatchPicker';
 import BookingAuditModal from '../../components/BookingAuditModal';
 import CreateSupportCaseModal from '../../components/CreateSupportCaseModal';
@@ -18,19 +19,24 @@ const AllBookings = ({ title: propTitle = "All Bookings", filterStatus: propFilt
     const [showCreateCase, setShowCreateCase] = useState(false);
     const [selectedBookingForCase, setSelectedBookingForCase] = useState(null);
 
-    // Determine section from path
+    // Determine section from path segments
     const getSectionConfig = () => {
-        const path = location.pathname;
-        if (path.endsWith('/new')) return { title: "New Bookings", status: "new", desc: "Incoming requests pending confirmation" };
-        if (path.endsWith('/today')) return { title: "Today's Bookings", range: "today", desc: "All rides scheduled for today" };
-        if (path.endsWith('/cancelled')) return { title: "Cancelled Bookings", status: "cancelled", desc: "History of cancelled ride requests" };
-        if (path.endsWith('/completed')) return { title: "Completed Bookings", status: "completed", desc: "Successfully finished trips" };
-        if (path.endsWith('/running')) return { title: "Running Bookings", status: "assigned,enroute,arrived,started", desc: "Trips currently in progress" };
-        if (path.endsWith('/online')) return { title: "Online Bookings", paymentMethod: "online", desc: "Bookings paid via online channels" };
-        if (path.endsWith('/offline')) return { title: "Offline Bookings", paymentMethod: "cash", desc: "Bookings with cash payment" };
-        if (path.endsWith('/advanced')) return { title: "Advanced Bookings", range: "advanced", desc: "Future scheduled rides (from tomorrow onwards)" };
-        if (path.endsWith('/free-vehicles')) return { title: "Unassigned Bookings", range: "unassigned", desc: "Confirmed rides waiting for driver dispatch" };
-        return { title: propTitle, status: propFilterStatus, desc: "Master log of all ride requests" };
+        const segments = location.pathname.split('/').filter(Boolean);
+        const lastSegment = segments[segments.length - 1];
+
+        const configs = {
+            'new': { title: "New Bookings", status: "new", desc: "Incoming requests pending confirmation" },
+            'today': { title: "Today's Bookings", range: "today", desc: "All rides scheduled for today" },
+            'cancelled': { title: "Cancelled Bookings", status: "cancelled", desc: "History of cancelled ride requests" },
+            'completed': { title: "Completed Bookings", status: "completed", desc: "Successfully finished trips" },
+            'running': { title: "Running Bookings", status: "assigned,enroute,arrived,started", desc: "Trips currently in progress" },
+            'online': { title: "Online Bookings", paymentMethod: "online", desc: "Bookings paid via online channels" },
+            'offline': { title: "Offline Bookings", paymentMethod: "cash", desc: "Bookings with cash payment" },
+            'advanced': { title: "Advanced Bookings", range: "advanced", desc: "Future scheduled rides (from tomorrow onwards)" },
+            'free-vehicles': { title: "Unassigned Bookings", range: "unassigned", desc: "Confirmed rides waiting for driver dispatch" }
+        };
+
+        return configs[lastSegment] || { title: propTitle, status: propFilterStatus, desc: "Master log of all ride requests" };
     };
 
     const section = getSectionConfig();
@@ -53,13 +59,20 @@ const AllBookings = ({ title: propTitle = "All Bookings", filterStatus: propFilt
             let queryParams = new URLSearchParams();
             if (searchTerm) queryParams.append('search', searchTerm);
             
-            // Use section specific filters or the default range state
-            if (section.status) queryParams.append('status', section.status);
-            if (section.paymentMethod) queryParams.append('paymentMethod', section.paymentMethod);
+            // Priority 1: Status from subsection
+            if (section.status) {
+                queryParams.append('status', section.status);
+            }
             
+            // Priority 2: Range (Subsection range overrides the local tab state if it exists)
             const activeRange = section.range || range;
             if (activeRange && activeRange !== 'all') {
                 queryParams.append('range', activeRange);
+            }
+
+            // Priority 3: Payment Method
+            if (section.paymentMethod) {
+                queryParams.append('paymentMethod', section.paymentMethod);
             }
 
             const [bookingsRes, driversRes] = await Promise.all([
@@ -67,8 +80,8 @@ const AllBookings = ({ title: propTitle = "All Bookings", filterStatus: propFilt
                 api.get('/drivers?isActive=true&status=available')
             ]);
             
-            if (bookingsRes && bookingsRes.data) setBookings(bookingsRes.data);
-            if (driversRes && driversRes.data) setDrivers(driversRes.data);
+            if (bookingsRes?.data) setBookings(bookingsRes.data);
+            if (driversRes?.data) setDrivers(driversRes.data);
         } catch (error) {
             console.error('Failed to fetch data', error);
         } finally {
@@ -78,9 +91,25 @@ const AllBookings = ({ title: propTitle = "All Bookings", filterStatus: propFilt
 
     useEffect(() => {
         fetchData();
-        // Polling for updates every 30 seconds
+        
+        // Listen for real-time updates
+        const handleSocketUpdate = () => {
+            fetchData(true); // Silent refresh
+        };
+
+        socket.on('booking_created', handleSocketUpdate);
+        socket.on('booking_updated', handleSocketUpdate);
+        socket.on('booking_cancelled', handleSocketUpdate);
+
+        // Polling as a fallback every 30 seconds
         const interval = setInterval(() => fetchData(true), 30000);
-        return () => clearInterval(interval);
+        
+        return () => {
+            clearInterval(interval);
+            socket.off('booking_created', handleSocketUpdate);
+            socket.off('booking_updated', handleSocketUpdate);
+            socket.off('booking_cancelled', handleSocketUpdate);
+        };
     }, [range, searchTerm, location.pathname]);
 
     const updateStatus = async (id, newStatus) => {
@@ -109,13 +138,20 @@ const AllBookings = ({ title: propTitle = "All Bookings", filterStatus: propFilt
 
     const handleExport = async () => {
         try {
-            const res = await api.get(`/bookings/export?range=${range}${filterStatus ? `&status=${filterStatus}` : ''}${searchTerm ? `&search=${searchTerm}` : ''}`, {
+            let queryParams = new URLSearchParams();
+            if (section.status) queryParams.append('status', section.status);
+            if (section.range) queryParams.append('range', section.range);
+            else if (range !== 'all') queryParams.append('range', range);
+            if (section.paymentMethod) queryParams.append('paymentMethod', section.paymentMethod);
+            if (searchTerm) queryParams.append('search', searchTerm);
+
+            const res = await api.get(`/bookings/export?${queryParams.toString()}`, {
                 responseType: 'blob'
             });
             const url = window.URL.createObjectURL(new Blob([res]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `bookings_${range}_${new Date().getTime()}.csv`);
+            link.setAttribute('download', `bookings_${section.title.replace(/\s+/g, '_')}_${new Date().getTime()}.csv`);
             document.body.appendChild(link);
             link.click();
             link.remove();

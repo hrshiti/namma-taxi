@@ -18,12 +18,20 @@ const Success = ({ selectedCab, setView }) => {
                     <span className="text-xl font-black text-obsidian tracking-wide">{selectedCab.bookingRef}</span>
                 </div>
             )}
-            <button 
-                onClick={() => setView('home')} 
-                className="primary-btn w-[220px]"
-            >
-                Return to Home
-            </button>
+            <div className="flex flex-col gap-3 w-[220px]">
+                <button 
+                    onClick={() => window.location.href = '/user/bookings'} 
+                    className="primary-btn w-full !bg-black !text-[#F7DC9D]"
+                >
+                    Track My Ride
+                </button>
+                <button 
+                    onClick={() => setView('home')} 
+                    className="text-xs font-black text-gray-400 uppercase tracking-widest py-3 hover:text-black transition-colors"
+                >
+                    Return to Home
+                </button>
+            </div>
         </div>
     );
 };

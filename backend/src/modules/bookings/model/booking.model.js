@@ -39,7 +39,10 @@ const bookingSchema = new mongoose.Schema(
       name: { type: String, required: true },
     },
     fareDetails: {
-      computedFare: { type: Number, required: true },
+      computedFare: { type: Number, required: true }, // Final fare after discount
+      originalFare: { type: Number }, // Fare before discount
+      discountAmount: { type: Number, default: 0 },
+      couponCode: { type: String },
       breakdown: {
         baseFare: Number,
         perKmRate: Number,

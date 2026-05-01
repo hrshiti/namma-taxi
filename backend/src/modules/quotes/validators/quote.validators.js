@@ -1,7 +1,7 @@
 import { body, param } from 'express-validator';
 
 export const createQuoteValidator = [
-  body('serviceType').isIn(['airport', 'outstation', 'tours']).withMessage('Invalid service type'),
+  body('serviceType').isIn(['airport', 'outstation', 'tours', 'local']).withMessage('Invalid service type'),
   body('tripMode').notEmpty().withMessage('Trip mode is required'),
   body('pickupLocation').notEmpty().withMessage('Pickup location is required'),
   body('dropLocation').custom((value, { req }) => {

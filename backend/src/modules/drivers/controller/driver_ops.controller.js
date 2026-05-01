@@ -20,8 +20,8 @@ export async function getDriverBookingDetail(req, res) {
 
 export async function updateBookingStatus(req, res) {
   const driverId = req.user.userId;
-  const { status } = req.body;
-  const booking = await bookingService.updateBookingStatusByDriver(req.params.id, driverId, status);
+  const { status, otp } = req.body;
+  const booking = await bookingService.updateBookingStatusByDriver(req.params.id, driverId, status, otp);
   return sendSuccess(res, {
     message: `Booking status updated to ${status}`,
     data: booking,

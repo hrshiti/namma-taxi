@@ -1,4 +1,4 @@
-﻿/**
+/**
  * src/routes/v1/vehicles.routes.js
  *
  * -- PHASE 1 STUB --
@@ -9,18 +9,18 @@
  */
 
 import { Router } from 'express';
-import { sendError } from '../../utils/apiResponse.js';
+import * as vehicleController from '../../modules/vehicles/controller/vehicles.controller.js';
+import { protect, authorize } from '../../middleware/auth.js';
 
 const router = Router();
 
-// Placeholder — replace with real controller methods in Phase 2
-router.all('*', (_req, res) => {
-  return sendError(res, {
-    message: '[STUB] vehicles module not yet implemented. Coming in Phase 2.',
-    code: 'NOT_IMPLEMENTED',
-    status: 501,
-  });
-});
+router.use(protect);
+router.use(authorize('admin', 'staff'));
+
+router.post('/', vehicleController.createVehicle);
+router.get('/', vehicleController.getVehicles);
+router.get('/:id', vehicleController.getVehicleById);
+router.patch('/:id', vehicleController.updateVehicle);
+router.delete('/:id', vehicleController.deleteVehicle);
 
 export default router;
-

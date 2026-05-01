@@ -145,7 +145,7 @@ export async function getBatchDetails(batchId) {
     .populate('processedBy', 'name')
     .populate({
       path: 'earningIds',
-      populate: { path: 'driverId', select: 'name phone' }
+      populate: { path: 'driverId', select: 'name phone bankDetails' }
     });
     
   if (!batch) throw AppError.notFound('Batch not found');

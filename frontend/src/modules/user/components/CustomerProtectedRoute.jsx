@@ -1,9 +1,8 @@
-import React from 'react';
-import { useCustomerAuth } from '../../../context/CustomerAuthContext';
-import CustomerLogin from './CustomerLogin';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext';
 
 const CustomerProtectedRoute = ({ children }) => {
-    const { customer, loading } = useCustomerAuth();
+    const { user: customer, loading } = useAuth();
 
     if (loading) {
         return (
@@ -14,7 +13,7 @@ const CustomerProtectedRoute = ({ children }) => {
     }
 
     if (!customer) {
-        return <CustomerLogin />;
+        return <Navigate to="/user/login" replace />;
     }
 
     return children;

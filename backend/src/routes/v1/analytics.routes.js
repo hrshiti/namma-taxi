@@ -17,8 +17,8 @@ const router = Router();
 // Protect all analytics routes to admin/staff only
 router.use(protect, authorize('admin', 'staff'));
 
-// GET /api/v1/analytics/dashboard
-router.get('/dashboard', analyticsController.getDashboardSummary);
+// GET /api/v1/analytics/dashboard-summary
+router.get('/dashboard-summary', analyticsController.getDashboardSummary);
 
 router.get('/bookings-summary', analyticsController.getBookingsSummary);
 router.get('/payments-summary', authorize('admin'), analyticsController.getPaymentsSummary);

@@ -13,7 +13,7 @@ const Notifications = () => {
             try {
                 const res = await api.get('/notifications/my');
                 if (res && res.data) {
-                    setNotifications(res.data);
+                    setNotifications(res.data.data || []);
                 }
             } catch (error) {
                 console.error('Failed to fetch notifications:', error);

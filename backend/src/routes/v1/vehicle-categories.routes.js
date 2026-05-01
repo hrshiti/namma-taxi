@@ -8,12 +8,10 @@ import { asyncHandler } from '../../utils/asyncHandler.js';
 const router = Router();
 
 // Public routes
-router.get('/public', asyncHandler(vehicleCategoryController.getAllCategories));
+router.get('/', asyncHandler(vehicleCategoryController.getAllCategories));
 
 // Admin routes
 router.use(protect, authorize('admin', 'staff'));
-
-router.get('/', asyncHandler(vehicleCategoryController.getAllCategories));
 
 router.post(
   '/',

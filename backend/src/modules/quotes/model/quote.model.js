@@ -4,7 +4,7 @@ const quoteSchema = new mongoose.Schema(
   {
     serviceType: {
       type: String,
-      enum: ['airport', 'outstation', 'tours'],
+      enum: ['airport', 'outstation', 'tours', 'local'],
       required: true,
     },
     tripMode: {

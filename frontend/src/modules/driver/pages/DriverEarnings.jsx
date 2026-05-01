@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Wallet, CheckCircle, Clock, ArrowUpRight } from 'lucide-react';
+import { Wallet, CheckCircle, Clock, ArrowUpRight, AlertTriangle, ShieldCheck } from 'lucide-react';
 import api from '../../../lib/api';
 
 const DriverEarnings = () => {
     const [earnings, setEarnings] = useState([]);
     const [summary, setSummary] = useState(null);
+    const [hasBankDetails, setHasBankDetails] = useState(false);
     const [loading, setLoading] = useState(true);
 
     const fetchEarnings = async () => {
@@ -12,8 +13,9 @@ const DriverEarnings = () => {
             setLoading(true);
             const res = await api.get('/driver/earnings');
             if (res && res.data) {
-                setEarnings(res.data.earnings);
-                setSummary(res.data.summary);
+                setEarnings(res.data.earnings || []);
+                setSummary(res.data.summary || null);
+                setHasBankDetails(res.data.hasBankDetails || false);
             }
         } catch (error) {
             console.error('Failed to fetch earnings', error);
@@ -34,11 +36,33 @@ const DriverEarnings = () => {
     );
 
     return (
-        <div className="space-y-8 font-outfit">
+        <div className="space-y-8 font-outfit pb-20">
             <header className="flex flex-col gap-1 mb-2">
                 <h2 className="text-2xl font-serif font-black uppercase text-black">Earnings</h2>
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest italic">Your settlement summary</p>
             </header>
+
+            {/* Bank Status Warning */}
+            {!hasBankDetails && (
+                <div className="bg-amber-50 border-2 border-amber-200 p-6 rounded-[2.5rem] flex items-start gap-4 animate-pulse">
+                    <div className="bg-amber-500 text-white p-3 rounded-2xl">
+                        <AlertTriangle size={24} />
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-black text-amber-900 uppercase">Payout Account Missing</h4>
+                        <p className="text-[10px] font-bold text-amber-700/70 mt-1 uppercase leading-snug">Please contact Admin to link your bank account for settlements.</p>
+                    </div>
+                </div>
+            )}
+
+            {hasBankDetails && (
+                <div className="bg-emerald-50 border-2 border-emerald-100 p-4 rounded-[2rem] flex items-center gap-3">
+                    <div className="bg-emerald-500 text-white p-1.5 rounded-full">
+                        <ShieldCheck size={14} />
+                    </div>
+                    <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Payout Account Verified</span>
+                </div>
+            )}
 
             {/* Summary Cards */}
             <div className="grid grid-cols-2 gap-4">
@@ -93,7 +117,9 @@ const DriverEarnings = () => {
                                         {item.settlementStatus}
                                     </span>
                                     {item.payoutBatchId && (
-                                        <span className="text-[7px] font-bold text-gray-400 uppercase mt-1">Paid in: {item.payoutBatchId.batchRef}</span>
+                                        <span className="text-[7px] font-bold text-gray-400 uppercase mt-1">
+                                            Batch: {typeof item.payoutBatchId === 'object' ? item.payoutBatchId.batchRef : item.payoutBatchId.substring(20)}
+                                        </span>
                                     )}
                                 </div>
                             </div>

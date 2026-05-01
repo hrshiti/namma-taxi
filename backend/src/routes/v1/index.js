@@ -40,6 +40,10 @@ import uploadRoutes from './upload.routes.js';
 import emailTemplatesRoutes from './email-templates.routes.js';
 import bannersRoutes from './banners.routes.js';
 import postRoutes from './posts.routes.js';
+import airportRoutes from './airport.routes.js';
+import toursRoutes from './tours.routes.js';
+import searchHistoryRoutes from './search-history.routes.js';
+
 
 const router = Router();
 
@@ -87,5 +91,9 @@ router.use('/coupons', couponsRoutes);
 router.use('/email-templates', emailTemplatesRoutes);
 router.use('/banners', bannersRoutes);
 router.use('/posts', postRoutes);
+router.use('/airport', airportRoutes);
+router.use('/search-history', searchHistoryRoutes);
+router.use('/tours', toursRoutes);
+
 
 export default router;

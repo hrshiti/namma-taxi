@@ -11,5 +11,6 @@ router.patch('/me', protect, authorize('customer'), asyncHandler(customerControl
 
 // Admin routes
 router.get('/', protect, authorize('admin', 'staff'), asyncHandler(customerController.getAllCustomers));
+router.patch('/:id', protect, authorize('admin'), asyncHandler(customerController.adminUpdateCustomer));
 
 export default router;

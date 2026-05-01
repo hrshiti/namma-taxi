@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCustomerAuth } from '../../../context/CustomerAuthContext';
+import { useAuth } from '../../../context/AuthContext';
 import api from '../../../lib/api';
 
 const EditProfile = () => {
     const navigate = useNavigate();
-    const { customer, setCustomer } = useCustomerAuth();
+    const { user: customer, setCustomer } = useAuth();
     
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');

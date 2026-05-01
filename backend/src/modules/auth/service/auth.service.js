@@ -16,8 +16,9 @@ export function generateToken(payload) {
  * Admin/Staff Login using email and password
  */
 export async function loginAdmin({ email, password }) {
+  const trimmedEmail = email.trim();
   // Find staff and include password for comparison
-  const user = await Staff.findOne({ email }).select('+passwordHash');
+  const user = await Staff.findOne({ email: trimmedEmail }).select('+passwordHash');
   if (!user) {
     throw AppError.unauthorized('Invalid email or password', 'AUTH_INVALID_CREDENTIALS');
   }
@@ -51,7 +52,8 @@ export async function loginAdmin({ email, password }) {
 export async function loginDriver({ phone, password }) {
   const Driver = (await import('../../drivers/model/driver.model.js')).default;
   
-  const user = await Driver.findOne({ phone }).select('+passwordHash');
+  const trimmedPhone = phone.trim();
+  const user = await Driver.findOne({ phone: trimmedPhone }).select('+passwordHash');
   if (!user) {
     throw AppError.unauthorized('Invalid phone or PIN', 'AUTH_INVALID_CREDENTIALS');
   }
@@ -119,6 +121,25 @@ export async function verifyCustomerOtp({ phone, code }) {
   const Otp = (await import('../model/otp.model.js')).default;
   const Customer = (await import('../../customers/model/customer.model.js')).default;
 
+  // Development Bypass
+  if (code === '123456') {
+    let customer = await Customer.findOne({ phone });
+    if (!customer) {
+      customer = await Customer.create({ phone, name: 'Guest User' });
+    }
+    const token = generateToken({ userId: customer._id, role: 'customer' });
+    return {
+      user: {
+        id: customer._id,
+        name: customer.name,
+        phone: customer.phone,
+        email: customer.email,
+        role: 'customer',
+      },
+      token,
+    };
+  }
+
   const otpRecord = await Otp.findOne({ phone, code });
   if (!otpRecord) {
     throw AppError.unauthorized('Invalid or expired OTP', 'AUTH_INVALID_OTP');
@@ -155,6 +176,27 @@ export async function verifyCustomerOtp({ phone, code }) {
     },
     token,
   };
+}
+
+/**
+ * Verify OTP without generating a token or creating a user record.
+ * Used for guest action verification (e.g., cancellation).
+ */
+export async function verifyOtpOnly({ phone, code }) {
+  const Otp = (await import('../model/otp.model.js')).default;
+  const otpRecord = await Otp.findOne({ phone, code });
+
+  if (!otpRecord) {
+    throw AppError.unauthorized('Invalid or expired OTP', 'AUTH_INVALID_OTP');
+  }
+
+  if (new Date() > otpRecord.expiresAt) {
+    throw AppError.unauthorized('OTP has expired', 'AUTH_EXPIRED_OTP');
+  }
+
+  // Delete the OTP record so it can't be reused
+  await Otp.deleteOne({ _id: otpRecord._id });
+  return true;
 }
 
 export async function getMe({ userId, role }) {

@@ -37,3 +37,11 @@ export async function getAllCustomers(req, res) {
     message: 'All customers retrieved',
   });
 }
+
+export async function adminUpdateCustomer(req, res) {
+  const customer = await customerService.updateCustomer(req.params.id, req.body);
+  return sendSuccess(res, {
+    data: customer,
+    message: 'Customer updated by admin',
+  });
+}

@@ -11,6 +11,7 @@ import {
     AlertCircle
 } from 'lucide-react';
 import api from '../../../lib/api';
+import socket from '../../../lib/socket';
 
 const DashboardPage = () => {
     const [data, setData] = useState(null);
@@ -18,54 +19,66 @@ const DashboardPage = () => {
     const [range, setRange] = useState('7d');
 
     useEffect(() => {
-        const fetchDashboardData = async () => {
+        const fetchDashboardData = async (isSilent = false) => {
             try {
-                setLoading(true);
-                const res = await api.get(`/analytics/dashboard?range=${range}`);
+                if (!isSilent) setLoading(true);
+                const res = await api.get(`/analytics/dashboard-summary?range=${range}`);
                 if (res && res.data) {
                     setData(res.data);
                 }
             } catch (error) {
                 console.error('Failed to fetch dashboard data:', error);
             } finally {
-                setLoading(false);
+                if (!isSilent) setLoading(false);
             }
         };
 
         fetchDashboardData();
+
+        // Socket listeners for real-time updates
+        const handleUpdate = () => fetchDashboardData(true);
+        socket.on('booking_created', handleUpdate);
+        socket.on('booking_updated', handleUpdate);
+        socket.on('booking_cancelled', handleUpdate);
+
+        return () => {
+            socket.off('booking_created', handleUpdate);
+            socket.off('booking_updated', handleUpdate);
+            socket.off('booking_cancelled', handleUpdate);
+        };
     }, [range]);
 
     const stats = useMemo(() => {
         if (!data) return [];
 
         return [
-            { 
-                label: 'Gross Revenue', 
-                value: `₹${(data.revenue?.gross || 0).toLocaleString()}`, 
-                icon: Banknote, 
-                color: 'text-emerald-600', 
-                trend: range === 'all' ? 'All Time' : `Last ${range}` 
+            {
+                label: 'Gross Revenue',
+                value: `₹${(data.revenue?.gross || 0).toLocaleString()}`,
+                icon: Banknote,
+                color: 'text-emerald-600',
+                trend: range === 'all' ? 'All Time' : `Last ${range}`
             },
-            { 
-                label: 'Net Realized', 
-                value: `₹${(data.revenue?.net || 0).toLocaleString()}`, 
-                icon: Banknote, 
-                color: 'text-footerBg', 
-                trend: 'After Refunds' 
+            {
+                label: 'Net Realized',
+                value: `₹${(data.revenue?.net || 0).toLocaleString()}`,
+                icon: Banknote,
+                color: 'text-footerBg',
+                trend: 'After Refunds'
             },
-            { 
-                label: 'Total Bookings', 
-                value: data.bookings?.total || 0, 
-                icon: ClipboardList, 
-                color: 'text-blue-600', 
-                trend: range === 'all' ? 'Volume' : `New (${range})` 
+            {
+                label: 'Total Bookings',
+                value: data.bookings?.total || 0,
+                icon: ClipboardList,
+                color: 'text-blue-600',
+                trend: range === 'all' ? 'Volume' : `New (${range})`
             },
-            { 
-                label: 'Active Drivers', 
-                value: `${data.drivers?.available || 0} / ${data.drivers?.total || 0}`, 
-                icon: Car, 
-                color: 'text-purple-600', 
-                trend: 'Available' 
+            {
+                label: 'Active Drivers',
+                value: `${data.drivers?.available || 0} / ${data.drivers?.total || 0}`,
+                icon: Car,
+                color: 'text-purple-600',
+                trend: 'Available'
             },
             {
                 label: 'Upcoming Unassigned',
@@ -97,11 +110,10 @@ const DashboardPage = () => {
                         <button
                             key={r}
                             onClick={() => setRange(r)}
-                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                range === r 
-                                ? 'bg-black text-[#F7DC9D]' 
-                                : 'bg-white text-gray-400 border border-gray-100 hover:border-gray-200'
-                            }`}
+                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${range === r
+                                    ? 'bg-black text-[#F7DC9D]'
+                                    : 'bg-white text-gray-400 border border-gray-100 hover:border-gray-200'
+                                }`}
                         >
                             {r}
                         </button>
@@ -139,7 +151,7 @@ const DashboardPage = () => {
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Active operational alerts</p>
                     </div>
                 </div>
-                
+
                 <div className="flex items-center gap-12">
                     <div className="flex flex-col">
                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Critical</span>
@@ -208,7 +220,7 @@ const DashboardPage = () => {
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Active operational cases</p>
                     </div>
                 </div>
-                
+
                 <div className="flex items-center gap-12">
                     <div className="flex flex-col">
                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Open Cases</span>
@@ -276,11 +288,10 @@ const DashboardPage = () => {
                                             <p className="font-black text-footerBg text-xs">₹{booking.fareDetails?.computedFare || '0'}</p>
                                         </td>
                                         <td className="px-8 py-4 text-center">
-                                            <span className={`px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${
-                                                booking.status === 'completed' ? 'bg-emerald-50 text-emerald-600' :
-                                                booking.status === 'cancelled' ? 'bg-red-50 text-red-600' : 
-                                                'bg-blue-50 text-blue-600'
-                                            }`}>
+                                            <span className={`px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${booking.status === 'completed' ? 'bg-emerald-50 text-emerald-600' :
+                                                    booking.status === 'cancelled' ? 'bg-red-50 text-red-600' :
+                                                        'bg-blue-50 text-blue-600'
+                                                }`}>
                                                 {booking.status}
                                             </span>
                                         </td>

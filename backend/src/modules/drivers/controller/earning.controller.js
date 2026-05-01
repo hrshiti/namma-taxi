@@ -10,11 +10,16 @@ export const getMyEarnings = asyncHandler(async (req, res) => {
   const driverId = req.user.id;
   const earnings = await earningService.getDriverEarnings(driverId);
   const summary = await earningService.getDriverEarningsSummary(driverId);
+  
+  const Driver = (await import('../model/driver.model.js')).default;
+  const driver = await Driver.findById(driverId).select('bankDetails');
+  const hasBankDetails = !!(driver?.bankDetails?.accountNumber || driver?.bankDetails?.upiId);
 
   return sendSuccess(res, {
     data: {
       earnings,
-      summary
+      summary,
+      hasBankDetails
     }
   });
 });

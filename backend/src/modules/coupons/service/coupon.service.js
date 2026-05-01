@@ -53,3 +53,11 @@ export async function validateCoupon(code, orderValue) {
 
   return coupon;
 }
+
+export async function incrementUsage(code) {
+  return Coupon.findOneAndUpdate(
+    { code: code.toUpperCase() },
+    { $inc: { usageCount: 1 } },
+    { new: true }
+  );
+}

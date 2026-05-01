@@ -41,6 +41,10 @@ async function boot() {
     logger.info(`[Server] ✓ API v1:  http://localhost:${config.port}/api/v1`);
   });
 
+  // Initialize Socket.io
+  const { initSocket } = await import('./utils/socket.js');
+  initSocket(server);
+
   // ── Graceful shutdown ─────────────────────────────────────────────────────
 
   const shutdown = async (signal) => {

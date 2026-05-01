@@ -10,6 +10,7 @@ router.get('/my', protect, asyncHandler(notificationController.getMyNotification
 
 // Admin/Staff routes
 router.use(authorize('admin', 'staff'));
+router.get('/', asyncHandler(notificationController.getAllNotifications));
 router.get('/booking/:bookingId', asyncHandler(notificationController.getBookingNotifications));
 
 export default router;

@@ -68,6 +68,7 @@ const AirportForm = ({
                     type="tel"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
+                    label="Contact"
                 />
 
                 <button 

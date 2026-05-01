@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { InputField, DateTimePicker } from './FormFields';
+import api from '../../../lib/api';
 
 const ToursForm = ({ 
     selectedPackage, 
@@ -13,7 +15,10 @@ const ToursForm = ({
     setPhoneNumber, 
     setView 
 }) => {
-    const packages = [
+    const [dynamicPackages, setDynamicPackages] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const fallbackPackages = [
         { value: "1day_450km_arunachalam", label: "1 DAY TRIP ARUNACHALAM/TIRUVANNAMALAI PACKAGE 450 KM" },
         { value: "1day_300km_hogenakkal", label: "1 DAY TRIP HOGENAKKAL FALLS PACKAGE 300 KM" },
         { value: "1day_300km_lepakshi", label: "1 DAY TRIP LEPAKSHI & ISHA/ADIYOGI PACKAGE 300 KM" },
@@ -28,16 +33,40 @@ const ToursForm = ({
         { value: "24hr_mysore", label: "24 Hours DAY TRIP MYSORE PACKAGE KM" }
     ];
 
+    useEffect(() => {
+        const fetchPackages = async () => {
+            try {
+                setIsLoading(true);
+                const res = await api.get('/tours');
+                if (res && res.data && res.data.length > 0) {
+                    const mapped = res.data.map(pkg => ({
+                        value: pkg.slug,
+                        label: pkg.name
+                    }));
+                    setDynamicPackages(mapped);
+                }
+            } catch (err) {
+                console.error('Failed to fetch tours packages:', err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchPackages();
+    }, []);
+
+    const displayPackages = dynamicPackages.length > 0 ? dynamicPackages : fallbackPackages;
+
     return (
-        <div className="animate-slide-up space-y-3">
-            <div className="relative">
+        <div className="animate-slide-up space-y-3 text-left">
+            <div className="relative group">
                 <select 
                     className="form-input appearance-none pr-8" 
                     value={selectedPackage} 
                     onChange={(e) => setSelectedPackage(e.target.value)}
+                    disabled={isLoading}
                 >
-                    <option value="">Select Package</option>
-                    {packages.map((pkg, index) => (
+                    <option value="">{isLoading ? 'Loading Packages...' : 'Select Package'}</option>
+                    {displayPackages.map((pkg, index) => (
                         <option key={index} value={pkg.value}>{pkg.label}</option>
                     ))}
                 </select>
@@ -46,43 +75,38 @@ const ToursForm = ({
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                 </div>
-                <span className="text-[8px] font-black text-primary uppercase absolute -top-1.5 left-3 bg-white px-1">Tours Package</span>
+                <span className="text-[8px] font-black text-primary uppercase absolute -top-1.5 left-3 bg-white px-1 z-10">Tours Package</span>
             </div>
             
-            <div className="relative">
-                <input 
-                    type="text" 
-                    className="form-input" 
-                    value={location} 
-                    onChange={(e) => setLocation(e.target.value)} 
-                    placeholder="Pickup Location"
-                />
-                <span className="text-[8px] font-black text-primary uppercase absolute -top-1.5 left-3 bg-white px-1">Live Pickup</span>
-            </div>
+            <InputField 
+                label="Live Pickup"
+                placeholder="Pickup Location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+            />
 
-            <div className="flex gap-2">
-                <div className="custom-date-wrapper">
-                    <input type="date" className="form-input" value={pickupDate} onChange={e => setPickupDate(e.target.value)} />
-                    {!pickupDate && <div className="custom-date-placeholder"><span>Date</span></div>}
-                </div>
-                <div className="custom-date-wrapper">
-                    <input type="time" className="form-input" value={pickupTime} onChange={e => setPickupTime(e.target.value)} />
-                    {!pickupTime && <div className="custom-date-placeholder"><span>Time</span></div>}
-                </div>
-            </div>
+            <DateTimePicker 
+                dateValue={pickupDate}
+                onDateChange={setPickupDate}
+                timeValue={pickupTime}
+                onTimeChange={setPickupTime}
+            />
 
-            <input 
-                type="tel" 
-                className="form-input" 
-                value={phoneNumber} 
-                onChange={(e) => setPhoneNumber(e.target.value)} 
-                placeholder="+91 Phone number" 
+            <InputField 
+                label="Contact"
+                placeholder="+91 Phone number"
+                type="tel"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
             />
 
             <button 
                 onClick={() => setView('results')} 
-                className="primary-btn flex items-center justify-center gap-3"
+                className="primary-btn flex items-center justify-center gap-3 active:scale-95 transition-transform"
             >
+                <div className="w-5 h-5 bg-obsidian rounded flex items-center justify-center">
+                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>
+                </div>
                 <span>Check Packages</span>
             </button>
         </div>

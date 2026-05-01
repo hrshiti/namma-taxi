@@ -9,8 +9,14 @@ const DriverLogin = () => {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const { login } = useAuth();
+    const { login, user } = useAuth();
     const navigate = useNavigate();
+
+    React.useEffect(() => {
+        if (user && user.role === 'driver') {
+            navigate('/driver/bookings');
+        }
+    }, [user, navigate]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();

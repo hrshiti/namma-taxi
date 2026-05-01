@@ -21,3 +21,21 @@ export async function getMyNotifications(req, res) {
     data: notifications,
   });
 }
+
+export async function getAllNotifications(req, res) {
+  const { channel, status, eventKey } = req.query;
+  const filter = {};
+  if (channel) filter.channel = channel;
+  if (status) filter.status = status;
+  if (eventKey) filter.eventKey = eventKey;
+
+  const notifications = await Notification.find(filter)
+    .populate('customerId', 'name phone')
+    .sort({ createdAt: -1 })
+    .limit(100);
+    
+  return sendSuccess(res, {
+    message: 'All notifications retrieved',
+    data: notifications,
+  });
+}

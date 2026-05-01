@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import { imageMap } from '../../data'
 import api from '../../lib/api'
+import { useAuth } from '../../context/AuthContext'
 
 // Components
 import Home from './pages/Home'
@@ -17,9 +18,14 @@ import ManageAddress from './pages/ManageAddress'
 import Notifications from './pages/Notifications'
 import CustomerProtectedRoute from './components/CustomerProtectedRoute'
 import { Terms, Privacy, Support } from './pages/StaticPages'
+import BlogList from './pages/BlogList'
+import BlogDetail from './pages/BlogDetail'
+import AirportInfo from './pages/AirportInfo'
+import CustomerLogin from './components/CustomerLogin'
 
 function UserModule() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   
   // Home Form States
   const [activeService, setActiveService] = useState('airport')
@@ -50,6 +56,10 @@ function UserModule() {
   const [appliedCoupon, setAppliedCoupon] = useState(null)
   const [discountAmount, setDiscountAmount] = useState(0)
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false)
+  
+  // Fleet States
+  const [globalCategories, setGlobalCategories] = useState([])
+  const [isCategoriesLoading, setIsCategoriesLoading] = useState(false)
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
@@ -80,11 +90,25 @@ function UserModule() {
       }
     } catch (err) {
       console.error('Coupon error:', err);
-      alert(err.response?.data?.message || 'Invalid coupon code');
+      alert(err.message || 'Invalid coupon code');
       setAppliedCoupon(null);
       setDiscountAmount(0);
     } finally {
       setIsApplyingCoupon(false);
+    }
+  };
+
+  const fetchGlobalCategories = async () => {
+    try {
+      setIsCategoriesLoading(true);
+      const res = await api.get('/vehicle-categories');
+      if (res && res.data) {
+        setGlobalCategories(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch global categories:', err);
+    } finally {
+      setIsCategoriesLoading(false);
     }
   };
 
@@ -101,23 +125,27 @@ function UserModule() {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
-          try {
-            // Reverse geocode using Google Maps API
-            // Use environment variable for Google Maps API Key
-            const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-            const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`);
-            const data = await response.json();
-            
-            if (data.status === 'OK' && data.results && data.results[0]) {
-              // Set the formatted address from Google
-              setLocation(data.results[0].formatted_address);
-            } else {
-              setLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)} (Current Location)`);
+            try {
+              // Using OpenStreetMap (Nominatim) - FREE Alternative to Google Maps
+              const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`, {
+                headers: {
+                  'User-Agent': 'NammaTaxiApp/1.0'
+                }
+              });
+              const data = await response.json();
+              
+              if (data && data.display_name) {
+                // Shorten the address for better UI (taking first 3 parts)
+                const parts = data.display_name.split(',');
+                const shortAddress = parts.slice(0, 3).join(',').trim();
+                setLocation(shortAddress);
+              } else {
+                setLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)} (GPS Location)`);
+              }
+            } catch (err) {
+              console.error("Nominatim Geocoding error:", err);
+              setLocation('Bengaluru, Karnataka (Auto-detected)');
             }
-          } catch (err) {
-            console.error("Google Reverse geocoding error:", err);
-            setLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)} (Current Location)`);
-          }
         },
         (error) => {
           console.error("Location error:", error);
@@ -127,6 +155,8 @@ function UserModule() {
     } else {
       setLocation('MG Road, Bengaluru, India');
     }
+
+    fetchGlobalCategories();
   }, [])
 
   const handleSearch = async () => {
@@ -163,6 +193,14 @@ function UserModule() {
       }
 
       const res = await api.post('/quotes', quoteData)
+      
+      // Log search history for analytics (Fire and forget)
+      api.post('/search-history/log', {
+        pickup: location,
+        drop: dropLocation,
+        category: activeService === 'airport' ? 'BANGALORE_AIRPORT' : 'NAMMATAXI',
+        userId: user?._id
+      }).catch(err => console.error('Search log failed:', err));
       
       if (res && res.data) {
         setQuoteId(res.data._id)
@@ -209,9 +247,15 @@ function UserModule() {
     
     try {
       // 1. Create Booking
+      if (!selectedCab) {
+        alert('Selection error: Please select a vehicle category again.');
+        setIsCheckingAvailability(false);
+        return;
+      }
+
       const bookingData = {
         quoteId,
-        categoryId: selectedCab.id,
+        categoryId: selectedCab._id || selectedCab.id,
         couponCode: appliedCoupon?.code || null,
         customerInfo: {
           name: userName || 'Guest User',
@@ -328,6 +372,7 @@ function UserModule() {
             returnDate={returnDate}
             setReturnDate={setReturnDate}
             handleSearch={handleSearch}
+            globalCategories={globalCategories}
           />
         } />
         
@@ -387,6 +432,10 @@ function UserModule() {
         <Route path="terms" element={<Terms />} />
         <Route path="privacy" element={<Privacy />} />
         <Route path="support" element={<Support />} />
+        <Route path="blog" element={<BlogList />} />
+        <Route path="blog/:slug" element={<BlogDetail />} />
+        <Route path="airport-info" element={<AirportInfo />} />
+        <Route path="login" element={<CustomerLogin />} />
       </Routes>
 
       {/* Global Spacer */}

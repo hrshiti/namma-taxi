@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Clock, ChevronRight, CheckCircle, Package } from 'lucide-react';
 import api from '../../../lib/api';
+import socket from '../../../lib/socket';
 
 const DriverBookings = () => {
     const [bookings, setBookings] = useState([]);
@@ -24,6 +25,17 @@ const DriverBookings = () => {
 
     useEffect(() => {
         fetchBookings();
+
+        const handleUpdate = () => fetchBookings();
+        socket.on('booking_updated', handleUpdate);
+        socket.on('booking_created', handleUpdate);
+        socket.on('booking_cancelled', handleUpdate);
+
+        return () => {
+            socket.off('booking_updated', handleUpdate);
+            socket.off('booking_created', handleUpdate);
+            socket.off('booking_cancelled', handleUpdate);
+        };
     }, []);
 
     const getStatusColor = (status) => {

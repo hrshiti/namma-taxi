@@ -2,7 +2,7 @@ import Customer from '../model/customer.model.js';
 import { AppError } from '../../../utils/AppError.js';
 
 export async function getCustomerById(id) {
-  const customer = await Customer.findById(id);
+  const customer = await Customer.findOne({ _id: id, isDeleted: { $ne: true } });
   if (!customer) throw AppError.notFound('Customer not found');
   return customer;
 }
@@ -18,7 +18,7 @@ export async function updateCustomer(id, data) {
 
 export async function getAllCustomers(filters = {}) {
   const { search } = filters;
-  const matchQuery = {};
+  const matchQuery = { isDeleted: { $ne: true } };
 
   if (search) {
     matchQuery.$or = [

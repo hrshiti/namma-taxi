@@ -121,7 +121,22 @@ const SettlementBatchDetailModal = ({ batchId, onClose, onBatchProcessed }) => {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <p className="text-[10px] font-black text-black uppercase italic">{e.driverId?.name}</p>
-                                                    <p className="text-[8px] text-gray-400 font-bold uppercase mt-0.5">{e.driverId?.phone}</p>
+                                                    <div className="mt-1 flex flex-col gap-0.5">
+                                                        <p className="text-[8px] text-gray-400 font-bold uppercase">{e.driverId?.phone}</p>
+                                                        {e.driverId?.bankDetails?.accountNumber ? (
+                                                            <div className="mt-1 p-2 bg-emerald-50/50 rounded-lg border border-emerald-100/50">
+                                                                <p className="text-[7px] font-black text-emerald-700 uppercase">Bank: {e.driverId.bankDetails.bankName}</p>
+                                                                <p className="text-[7px] font-black text-emerald-700">A/C: {e.driverId.bankDetails.accountNumber}</p>
+                                                                <p className="text-[7px] font-black text-emerald-700 uppercase">IFSC: {e.driverId.bankDetails.ifscCode}</p>
+                                                            </div>
+                                                        ) : e.driverId?.bankDetails?.upiId ? (
+                                                            <div className="mt-1 p-2 bg-blue-50/50 rounded-lg border border-blue-100/50">
+                                                                <p className="text-[7px] font-black text-blue-700 uppercase">UPI: {e.driverId.bankDetails.upiId}</p>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-[7px] font-black text-red-400 uppercase italic mt-1">Bank details missing</p>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-[10px] font-bold text-black">₹{e.tripFare}</td>
                                                 <td className="px-6 py-4 text-right">

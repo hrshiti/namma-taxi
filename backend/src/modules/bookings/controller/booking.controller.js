@@ -102,15 +102,24 @@ export async function assignDriver(req, res) {
 }
 
 export async function cancelBooking(req, res) {
-  const { reason, phone } = req.body;
+  const { reason, phone, otp } = req.body;
   const authContext = {
     userId: req.user?.userId,
     guestPhone: phone,
+    otp,
     role: req.user?.role
   };
   const booking = await bookingService.cancelBooking(req.params.id, authContext, reason);
   return sendSuccess(res, {
     message: 'Booking cancelled successfully',
     data: booking,
+  });
+}
+
+export async function getDashboardStats(req, res) {
+  const stats = await bookingService.getDashboardStats();
+  return sendSuccess(res, {
+    message: 'Dashboard stats retrieved',
+    data: stats,
   });
 }

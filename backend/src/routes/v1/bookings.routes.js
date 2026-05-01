@@ -43,6 +43,7 @@ router.get(
 // Admin routes
 router.use(protect, authorize('admin', 'staff'));
 
+router.get('/stats', asyncHandler(bookingController.getDashboardStats));
 router.get('/', validators.listBookingsValidator, validate, asyncHandler(bookingController.getAllBookings));
 router.get('/export', authorize('admin'), validators.listBookingsValidator, validate, asyncHandler(bookingController.exportBookings));
 

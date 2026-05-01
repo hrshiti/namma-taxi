@@ -1,9 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCustomerAuth } from '../../../context/CustomerAuthContext';
+import { useAuth } from '../../../context/AuthContext';
 
 const Header = () => {
-    const { customer } = useCustomerAuth();
+    const { user: customer } = useAuth();
     const navigate = useNavigate();
 
     return (

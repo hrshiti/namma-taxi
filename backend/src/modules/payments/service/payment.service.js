@@ -10,15 +10,16 @@ export const initiatePayment = async (bookingId, authContext = {}) => {
   if (!booking) throw AppError.notFound('Booking not found');
 
   // 1. Ownership / Eligibility Check
-  if (userId) {
-    // Authenticated user: must own the booking
-    if (!booking.customerId || booking.customerId.toString() !== userId.toString()) {
+  if (booking.customerId) {
+    // Authenticated booking: must own the booking
+    if (!userId || booking.customerId.toString() !== userId.toString()) {
       throw AppError.forbidden('You do not have permission to pay for this booking');
     }
   } else {
     // Guest flow: must provide phone that matches the booking
-    if (!guestPhone || booking.customerInfo.phone !== guestPhone) {
-      throw AppError.forbidden('Guest verification failed for this booking');
+    const normalize = (p) => p ? p.replace(/\D/g, '') : '';
+    if (!guestPhone || normalize(booking.customerInfo.phone) !== normalize(guestPhone)) {
+      throw AppError.forbidden('Guest verification failed for this booking. Phone mismatch.');
     }
   }
 

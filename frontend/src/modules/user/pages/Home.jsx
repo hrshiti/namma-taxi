@@ -32,7 +32,8 @@ const Home = ({
     setOutstationMode, 
     returnDate, 
     setReturnDate,
-    handleSearch
+    handleSearch,
+    globalCategories = []
 }) => {
     return (
         <div className="animate-slide-up">
@@ -116,6 +117,35 @@ const Home = ({
                     )}
                 </div>
             </div>
+
+            {/* Dynamic Fleet Preview */}
+            {globalCategories.length > 0 && (
+                <div className="px-5 mt-10">
+                    <div className="flex justify-between items-end mb-4 px-1">
+                        <h2 className="font-extrabold text-sm uppercase tracking-tight">Our Premium Fleet</h2>
+                        <span className="text-[8px] font-black text-primary uppercase tracking-widest bg-primary/10 px-2 py-1 rounded">Real-time Availability</span>
+                    </div>
+                    <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-1 px-1">
+                        {globalCategories.map(cat => (
+                            <div key={cat._id} className="flex-shrink-0 w-[160px] bg-white p-4 rounded-[2rem] border border-black/5 shadow-sm text-center">
+                                <div className="h-20 flex items-center justify-center mb-2">
+                                    <img 
+                                        src={cat.image} 
+                                        className="w-full h-auto object-contain max-h-full drop-shadow-sm" 
+                                        alt={cat.name} 
+                                    />
+                                </div>
+                                <h3 className="font-black text-[10px] uppercase tracking-tight text-obsidian truncate">{cat.name}</h3>
+                                <p className="text-[8px] font-bold text-gray-400 mt-1 uppercase">{cat.seats} Seater • AC</p>
+                                <div className="mt-2 pt-2 border-t border-black/5">
+                                    <span className="text-[9px] font-black text-primary uppercase">Starting ₹{cat.baseDisplayPrice || '??'}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <Banners />
             <div className="flex justify-center py-8 opacity-20">
                 <p className="text-3xl font-black italic tracking-tighter text-obsidian">#goNammaTaxi</p>

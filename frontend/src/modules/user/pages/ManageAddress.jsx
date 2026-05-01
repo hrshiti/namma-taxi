@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { MapPin, Home, Briefcase, Plus, Trash2, Edit3, Navigation, ChevronLeft, Map } from 'lucide-react';
 import api from '../../../lib/api';
 
 const ManageAddress = () => {
@@ -10,12 +11,13 @@ const ManageAddress = () => {
     const [isAdding, setIsAdding] = useState(false);
     const [newAddr, setNewAddr] = useState({ type: '', address: '' });
     const [editId, setEditId] = useState(null);
+    const [isLocating, setIsLocating] = useState(false);
 
     const fetchAddresses = async () => {
         try {
             setIsLoading(true);
             const res = await api.get('/addresses');
-            setAddresses(res.data);
+            setAddresses(res.data || []);
         } catch (err) {
             console.error('Failed to fetch addresses:', err);
         } finally {
@@ -28,6 +30,7 @@ const ManageAddress = () => {
     }, []);
 
     const handleDelete = async (id) => {
+        if (!window.confirm('Delete this address?')) return;
         try {
             await api.delete(`/addresses/${id}`);
             setAddresses(addresses.filter(a => a._id !== id));
@@ -38,7 +41,10 @@ const ManageAddress = () => {
     };
 
     const handleAdd = async () => {
-        if (!newAddr.type || !newAddr.address) return;
+        if (!newAddr.type || !newAddr.address) {
+            alert('Please fill all fields');
+            return;
+        }
         try {
             const res = await api.post('/addresses', newAddr);
             setAddresses([res.data, ...addresses]);
@@ -51,6 +57,7 @@ const ManageAddress = () => {
     };
 
     const handleUpdate = async (id, text) => {
+        if (!text) return;
         try {
             const res = await api.patch(`/addresses/${id}`, { address: text });
             setAddresses(addresses.map(a => a._id === id ? res.data : a));
@@ -61,8 +68,6 @@ const ManageAddress = () => {
         }
     };
 
-    const [isLocating, setIsLocating] = useState(false);
-
     const handleUseCurrentLocation = () => {
         if ("geolocation" in navigator) {
             setIsLocating(true);
@@ -70,12 +75,13 @@ const ManageAddress = () => {
                 async (position) => {
                     const { latitude, longitude } = position.coords;
                     try {
-                        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-                        const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`);
+                        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`, {
+                            headers: { 'User-Agent': 'NammaTaxiApp/1.0' }
+                        });
                         const data = await response.json();
                         
-                        if (data.status === 'OK' && data.results && data.results[0]) {
-                            setNewAddr(prev => ({ ...prev, address: data.results[0].formatted_address }));
+                        if (data && data.display_name) {
+                            setNewAddr(prev => ({ ...prev, address: data.display_name }));
                         } else {
                             alert('Could not fetch address for this location.');
                         }
@@ -95,118 +101,154 @@ const ManageAddress = () => {
         }
     };
 
+    const getIcon = (type) => {
+        const t = type.toLowerCase();
+        if (t.includes('home')) return <Home size={20} />;
+        if (t.includes('work') || t.includes('office')) return <Briefcase size={20} />;
+        return <MapPin size={20} />;
+    };
+
     return (
-        <div className="animate-slide-up px-6 pt-6 pb-32">
+        <div className="animate-slide-up px-6 pt-6 pb-32 min-h-screen bg-[#F8F9FA]">
+            {/* Header */}
             <div className="flex items-center gap-4 mb-8">
                 <button 
                     onClick={() => navigate(-1)} 
-                    className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm"
+                    className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm active:scale-95 transition-transform"
                 >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-                    </svg>
+                    <ChevronLeft size={24} className="text-obsidian" />
                 </button>
-                <h1 className="text-2xl font-black">My Addresses</h1>
+                <div>
+                    <h1 className="text-2xl font-black text-obsidian tracking-tight">Saved Places</h1>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mt-1">Manage Your Destinations</p>
+                </div>
             </div>
 
+            {/* Address List */}
             <div className="space-y-4 mb-8">
                 {isLoading ? (
-                    <div className="text-center py-10 text-gray-400 font-bold">Loading...</div>
+                    <div className="flex flex-col items-center justify-center py-20 gap-4">
+                        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Fetching Addresses...</p>
+                    </div>
                 ) : addresses.length === 0 ? (
-                    <div className="text-center py-10 text-gray-400 font-bold">No addresses found.</div>
-                ) : addresses.map(item => {
-                    const isHome = item.type.toLowerCase().includes('home');
-                    const icon = isHome 
-                        ? 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'
-                        : 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4';
-                        
-                    return (
-                        <div key={item._id} className="bg-white p-5 rounded-[32px] shadow-sm flex gap-4 animate-scale-in">
-                            <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
-                                </svg>
+                    <div className="bg-white rounded-[32px] p-12 text-center shadow-sm border border-gray-50">
+                        <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Map className="text-gray-200" size={32} />
+                        </div>
+                        <h3 className="font-bold text-obsidian mb-1">No Saved Addresses</h3>
+                        <p className="text-xs text-gray-400 px-4">Save your home, office or frequent spots for faster booking.</p>
+                    </div>
+                ) : (
+                    addresses.map(item => (
+                        <div key={item._id} className="bg-white p-5 rounded-[28px] shadow-sm border border-gray-50 flex gap-4 animate-scale-in group hover:border-primary/30 transition-all">
+                            <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110">
+                                {getIcon(item.type)}
                             </div>
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                                 <div className="flex justify-between items-start">
-                                    <h3 className="font-extrabold text-sm mb-1">{item.type}</h3>
-                                    <div className="flex gap-2">
+                                    <h3 className="font-black text-[13px] text-obsidian uppercase tracking-tight truncate pr-2">{item.type}</h3>
+                                    <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button 
                                             onClick={() => setEditId(item._id)}
-                                            className="text-primary font-bold text-[10px] uppercase"
+                                            className="text-gray-400 hover:text-primary transition-colors"
                                         >
-                                            Edit
+                                            <Edit3 size={14} />
                                         </button>
                                         <button 
                                             onClick={() => handleDelete(item._id)}
-                                            className="text-red-500 font-bold text-[10px] uppercase"
+                                            className="text-gray-400 hover:text-red-500 transition-colors"
                                         >
-                                            Delete
+                                            <Trash2 size={14} />
                                         </button>
                                     </div>
                                 </div>
+                                
                                 {editId === item._id ? (
-                                    <div className="mt-2 flex gap-2">
+                                    <div className="mt-2">
                                         <input 
                                             autoFocus
-                                            className="text-[11px] border-b border-primary w-full outline-none"
+                                            className="text-[11px] font-medium border-b-2 border-primary w-full outline-none py-1 bg-primary/5 px-2 rounded-t-lg"
                                             defaultValue={item.address}
                                             onBlur={(e) => handleUpdate(item._id, e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && handleUpdate(item._id, e.target.value)}
                                         />
+                                        <p className="text-[8px] font-black text-primary uppercase mt-1 ml-1">Press Enter to save</p>
                                     </div>
                                 ) : (
-                                    <p className="text-gray-400 text-[11px] leading-relaxed pr-4">{item.address}</p>
+                                    <p className="text-gray-400 text-[11px] font-medium leading-relaxed mt-0.5 line-clamp-2">{item.address}</p>
                                 )}
                             </div>
                         </div>
-                    )
-                })}
+                    ))
+                )}
             </div>
 
+            {/* Add New Section */}
             {isAdding ? (
-                <div className="bg-white p-6 rounded-[32px] shadow-lg border border-primary/20 space-y-3 mb-8 animate-slide-up">
-                    <input 
-                        placeholder="Address Type (e.g. Home, Work)" 
-                        className="form-input text-xs"
-                        value={newAddr.type}
-                        onChange={e => setNewAddr({ ...newAddr, type: e.target.value })}
-                    />
+                <div className="bg-white p-6 rounded-[32px] shadow-xl border border-primary/20 space-y-4 mb-8 animate-slide-up">
+                    <div className="relative">
+                        <input 
+                            placeholder="Type (e.g. Home, Office, Gym)" 
+                            className="form-input text-xs font-bold"
+                            value={newAddr.type}
+                            onChange={e => setNewAddr({ ...newAddr, type: e.target.value })}
+                        />
+                        <span className="text-[8px] font-black text-primary uppercase absolute -top-1.5 left-3 bg-white px-1">Label</span>
+                    </div>
                     
                     <button 
                         onClick={handleUseCurrentLocation}
                         disabled={isLocating}
-                        className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-wider bg-primary/5 px-4 py-2 rounded-xl border border-primary/10 hover:bg-primary/10 transition-all disabled:opacity-50"
+                        className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-wider bg-primary/5 px-4 py-3 rounded-xl border border-primary/10 hover:bg-primary/10 transition-all disabled:opacity-50 w-full justify-center"
                     >
-                        <svg className={`w-3 h-3 ${isLocating ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
+                        <Navigation className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
                         {isLocating ? 'Locating...' : 'Use Current Location'}
                     </button>
 
-                    <textarea 
-                        placeholder="Full Address" 
-                        className="form-input text-xs min-h-[80px]"
-                        value={newAddr.address}
-                        onChange={e => setNewAddr({ ...newAddr, address: e.target.value })}
-                    />
-                    <div className="flex gap-2">
-                        <button onClick={handleAdd} className="primary-btn text-[10px] py-3">Save Address</button>
-                        <button onClick={() => setIsAdding(false)} className="flex-1 bg-gray-100 font-black text-[10px] uppercase rounded-2xl">Cancel</button>
+                    <div className="relative">
+                        <textarea 
+                            placeholder="Full address details..." 
+                            className="form-input text-xs font-medium min-h-[100px] py-4"
+                            value={newAddr.address}
+                            onChange={e => setNewAddr({ ...newAddr, address: e.target.value })}
+                        />
+                        <span className="text-[8px] font-black text-primary uppercase absolute -top-1.5 left-3 bg-white px-1">Address Details</span>
+                    </div>
+
+                    <div className="flex gap-3">
+                        <button 
+                            onClick={handleAdd} 
+                            className="primary-btn text-[10px] py-4 flex-1 shadow-lg shadow-primary/20"
+                        >
+                            Save Location
+                        </button>
+                        <button 
+                            onClick={() => setIsAdding(false)} 
+                            className="flex-1 bg-gray-50 text-gray-400 font-black text-[10px] uppercase rounded-2xl hover:bg-gray-100 transition-colors"
+                        >
+                            Cancel
+                        </button>
                     </div>
                 </div>
             ) : (
                 <button 
                     onClick={() => setIsAdding(true)}
-                    className="w-full py-5 border-2 border-dashed border-gray-200 rounded-[32px] flex items-center justify-center gap-3 text-gray-400 hover:border-primary hover:text-primary transition-all active:scale-95"
+                    className="w-full py-6 border-2 border-dashed border-gray-200 rounded-[32px] flex items-center justify-center gap-3 text-gray-400 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all active:scale-95 group"
                 >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    <span className="font-black text-xs uppercase tracking-widest">Add New Address</span>
+                    <div className="w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                        <Plus size={18} />
+                    </div>
+                    <span className="font-black text-[11px] uppercase tracking-[0.2em]">Add New Place</span>
                 </button>
             )}
+
+            {/* Float Badge */}
+            <div className="fixed bottom-24 left-0 w-full flex justify-center pointer-events-none">
+                <div className="bg-obsidian/5 px-4 py-1.5 rounded-full backdrop-blur-md border border-white/50">
+                    <p className="text-[7px] font-black text-obsidian/30 uppercase tracking-[0.5em]">Address_Manager_v1.0</p>
+                </div>
+            </div>
         </div>
     );
 };

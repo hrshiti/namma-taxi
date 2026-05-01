@@ -167,6 +167,32 @@ async function seed() {
       });
     }
 
+    // Local Pricing (City Rides)
+    await Pricing.create({
+      serviceType: 'local',
+      tripMode: 'city_ride',
+      vehicleCategoryId: catHatch._id,
+      baseFare: 50,
+      perKmRate: 12,
+      minimumKm: 5,
+    });
+    await Pricing.create({
+      serviceType: 'local',
+      tripMode: 'city_ride',
+      vehicleCategoryId: catSedan._id,
+      baseFare: 80,
+      perKmRate: 15,
+      minimumKm: 5,
+    });
+    await Pricing.create({
+      serviceType: 'local',
+      tripMode: 'city_ride',
+      vehicleCategoryId: catSuv._id,
+      baseFare: 120,
+      perKmRate: 18,
+      minimumKm: 5,
+    });
+
     console.log('Pricing seeded');
     console.log('Seed completed successfully!');
   } catch (err) {

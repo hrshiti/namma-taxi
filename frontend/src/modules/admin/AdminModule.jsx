@@ -28,6 +28,8 @@ import CouponListPage from './pages/CouponListPage';
 import DiscountCouponPage from './pages/DiscountCouponPage';
 import CouponFormPage from './pages/CouponFormPage';
 import BlogManagement from './pages/BlogManagement';
+import AirportManagement from './pages/taxi/AirportManagement';
+import SearchHistoryPage from './pages/taxi/SearchHistoryPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 
 function AdminModule() {
@@ -70,8 +72,15 @@ function AdminModule() {
                 <Route path="posts/nammataxi" element={<BlogManagement defaultCategory="NAMMATAXI" />} />
                 <Route path="posts/airport-taxi" element={<BlogManagement defaultCategory="AIRPORTTAXISERVICE" />} />
                 <Route path="posts/*" element={<BlogManagement />} />
-                <Route path="bangalore-taxi/*" element={<PlaceholderPage />} />
-                <Route path="search-histories/*" element={<PlaceholderPage />} />
+                <Route path="bangalore-taxi/keywords" element={<Keywords />} />
+                <Route path="bangalore-taxi/posts" element={<BlogManagement defaultCategory="AIRPORTTAXISERVICE" />} />
+                <Route path="bangalore-taxi/distances" element={<AirportManagement defaultTab="DISTANCE" />} />
+                <Route path="bangalore-taxi/contacts" element={<AirportManagement defaultTab="CONTACT" />} />
+                <Route path="bangalore-taxi/routes" element={<AirportManagement defaultTab="ROUTE" />} />
+                <Route path="bangalore-taxi/*" element={<AirportManagement />} />
+                <Route path="search-histories/nammataxi" element={<SearchHistoryPage defaultCategory="NAMMATAXI" />} />
+                <Route path="search-histories/bangalore-airport" element={<SearchHistoryPage defaultCategory="BANGALORE_AIRPORT" />} />
+                <Route path="search-histories/*" element={<SearchHistoryPage />} />
 
                 {/* Default Fallback Route */}
                 <Route path="*" element={<DashboardPage />} />

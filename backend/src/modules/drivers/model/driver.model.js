@@ -56,7 +56,21 @@ const driverSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    bankDetails: {
+      accountHolderName: { type: String, trim: true },
+      accountNumber: { type: String, trim: true },
+      ifscCode: { type: String, trim: true },
+      bankName: { type: String, trim: true },
+      upiId: { type: String, trim: true },
+    },
     notes: String,
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );
@@ -73,5 +87,10 @@ driverSchema.pre('save', async function (next) {
 driverSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.passwordHash);
 };
+
+// Indexes for performance
+driverSchema.index({ status: 1, isActive: 1 });
+driverSchema.index({ vehicleCategoryId: 1 });
+driverSchema.index({ createdAt: -1 });
 
 export default mongoose.model('Driver', driverSchema);

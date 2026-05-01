@@ -2,6 +2,7 @@ import SupportCase from '../model/supportCase.model.js';
 import Booking from '../../bookings/model/booking.model.js';
 import Staff from '../../staff/model/staff.model.js';
 import { AppError } from '../../../utils/AppError.js';
+import { triggerNotification } from '../../notifications/service/notification.service.js';
 
 /**
  * Create a new support case
@@ -35,7 +36,11 @@ export async function createCase(data, user) {
     caseData.assignedTo = assignedTo;
   }
 
-  return SupportCase.create(caseData);
+  const newCase = await SupportCase.create(caseData);
+
+  // Trigger internal notification/log if needed (Future)
+  
+  return newCase;
 }
 
 /**
@@ -110,7 +115,22 @@ export async function updateCase(caseId, updates, user) {
   }
 
   supportCase.latestActivityAt = new Date();
-  return supportCase.save();
+  const updatedCase = await supportCase.save();
+
+  // Trigger notification to customer on status change
+  if (updates.status && updatedCase.customerId) {
+    await triggerNotification('support_update', {
+      customerId: updatedCase.customerId,
+      customerPhone: updatedCase.customerPhone,
+      bookingId: updatedCase.bookingId,
+      bookingRef: updatedCase.bookingRef,
+      caseRef: updatedCase.caseRef,
+      status: updatedCase.status,
+      subject: updatedCase.subject
+    });
+  }
+
+  return updatedCase;
 }
 
 /**

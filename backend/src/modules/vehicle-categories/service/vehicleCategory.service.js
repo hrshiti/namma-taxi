@@ -12,7 +12,7 @@ export async function createCategory(data) {
 }
 
 export async function getAllCategories(filters = {}) {
-  const query = {};
+  const query = { isDeleted: { $ne: true } };
   if (filters.isActive !== undefined) {
     query.isActive = filters.isActive;
   }
@@ -42,10 +42,14 @@ export async function updateCategory(id, data) {
 }
 
 export async function deleteCategory(id) {
-  // Soft delete by setting isActive to false
+  // Soft delete by setting isDeleted to true
   const category = await VehicleCategory.findByIdAndUpdate(
     id,
-    { isActive: false },
+    { 
+      isDeleted: true, 
+      deletedAt: new Date(),
+      isActive: false 
+    },
     { new: true }
   );
 

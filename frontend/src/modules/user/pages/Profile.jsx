@@ -1,10 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCustomerAuth } from '../../../context/CustomerAuthContext';
+import { useAuth } from '../../../context/AuthContext';
 
 const Profile = () => {
     const navigate = useNavigate();
-    const { customer, logoutCustomer } = useCustomerAuth();
+    const { user: customer, logout: logoutCustomer } = useAuth();
     
     // Fallback if somehow rendered without customer (should not happen with ProtectedRoute)
     if (!customer) return null;

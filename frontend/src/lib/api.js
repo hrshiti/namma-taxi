@@ -77,6 +77,23 @@ class ApiClient {
     }
 
     if (!response.ok) {
+      // Global Session Expiration Handler
+      if (response.status === 401) {
+        console.warn('Session expired or unauthorized. Clearing credentials.');
+        localStorage.removeItem('customer_token');
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('driver_token');
+        
+        // Avoid redirect loop if already on a login page
+        const isLoginPage = pathname.includes('/login');
+        if (!isLoginPage && typeof window !== 'undefined') {
+          // Redirect based on context
+          if (pathname.startsWith('/admin')) window.location.href = '/admin/login';
+          else if (pathname.startsWith('/driver')) window.location.href = '/driver/login';
+          else window.location.href = '/user'; // For customers
+        }
+      }
+
       const error = new Error(data?.message || `HTTP ${response.status}`);
       error.status = response.status;
       error.code = data?.code;

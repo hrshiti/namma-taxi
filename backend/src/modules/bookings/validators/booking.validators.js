@@ -1,10 +1,10 @@
 import { body, param, query } from 'express-validator';
 
 export const listBookingsValidator = [
-  query('status').optional().isIn(['new', 'confirmed', 'assigned', 'enroute', 'arrived', 'started', 'completed', 'cancelled']),
+  query('status').optional().isString(),
   query('paymentStatus').optional().isIn(['unpaid', 'pending', 'paid', 'failed', 'refunded']),
   query('refundStatus').optional().isIn(['none', 'pending', 'processed', 'failed', 'not_required', 'manual_review']),
-  query('range').optional().isIn(['today', 'tomorrow', 'upcoming', 'unassigned', 'all']),
+  query('range').optional().isIn(['today', 'tomorrow', 'upcoming', 'unassigned', 'advanced', 'all']),
   query('search').optional().isString().trim(),
 ];
 

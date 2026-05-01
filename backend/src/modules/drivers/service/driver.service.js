@@ -15,11 +15,12 @@ export async function createDriver(data) {
 }
 
 export async function getAllDrivers(filters = {}) {
-  return Driver.find(filters).populate('vehicleCategoryId').sort({ createdAt: -1 });
+  const query = { ...filters, isDeleted: { $ne: true } };
+  return Driver.find(query).populate('vehicleCategoryId').sort({ createdAt: -1 });
 }
 
 export async function getDriverById(id) {
-  const driver = await Driver.findById(id).populate('vehicleCategoryId');
+  const driver = await Driver.findOne({ _id: id, isDeleted: { $ne: true } }).populate('vehicleCategoryId');
   if (!driver) {
     throw AppError.notFound('Driver not found');
   }
@@ -40,7 +41,12 @@ export async function updateDriver(id, data) {
 }
 
 export async function deleteDriver(id) {
-  const driver = await Driver.findByIdAndDelete(id);
+  const driver = await Driver.findByIdAndUpdate(id, { 
+    isDeleted: true, 
+    deletedAt: new Date(),
+    isActive: false 
+  }, { new: true });
+  
   if (!driver) {
     throw AppError.notFound('Driver not found');
   }
@@ -48,5 +54,5 @@ export async function deleteDriver(id) {
 }
 
 export async function getAvailableDrivers() {
-  return Driver.find({ isActive: true, status: 'available' });
+  return Driver.find({ isActive: true, status: 'available', isDeleted: { $ne: true } });
 }

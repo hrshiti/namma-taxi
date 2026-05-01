@@ -21,31 +21,38 @@ import { useShop } from '../../../context/ShopContext';
 const UserDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { orders, wishlist, getProductById, getPackById } = useShop();
+    const [user, setUser] = React.useState(null);
+    const [loading, setLoading] = React.useState(true);
 
-    // Get all users for updating purposes
-    const [storedUsers, setStoredUsers] = React.useState(() => {
-        return JSON.parse(localStorage.getItem('farmlyf_users')) || [];
-    });
-
-    // Get specific user data
-    const user = useMemo(() => {
-        return storedUsers.find(u => u.id === id);
-    }, [storedUsers, id]);
-
-    // Handle blocking/unblocking
-    const handleToggleBlock = () => {
-        const updatedUsers = storedUsers.map(u =>
-            u.id === id ? { ...u, isBlocked: !u.isBlocked } : u
-        );
-        localStorage.setItem('farmlyf_users', JSON.stringify(updatedUsers));
-        setStoredUsers(updatedUsers);
+    const fetchUserDetail = async () => {
+        try {
+            setLoading(true);
+            const res = await api.get(`/customers/${id}`);
+            if (res && res.data) {
+                setUser(res.data);
+            }
+        } catch (err) {
+            console.error('Failed to fetch user details:', err);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    // Get user orders
-    const userOrders = useMemo(() => {
-        return Object.values(orders).flat().filter(o => o.userId === id);
-    }, [orders, id]);
+    React.useEffect(() => {
+        fetchUserDetail();
+    }, [id]);
+
+    const handleToggleBlock = async () => {
+        try {
+            const newStatus = !user.isActive;
+            await api.patch(`/customers/${id}`, { isActive: newStatus });
+            setUser({ ...user, isActive: newStatus });
+        } catch (err) {
+            console.error('Failed to toggle status:', err);
+        }
+    };
+
+    const userOrders = user?.bookings || [];
 
     if (!user) {
         return (
@@ -77,13 +84,13 @@ const UserDetailPage = () => {
                 <div className="flex gap-3">
                     <button
                         onClick={handleToggleBlock}
-                        className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm ${user.isBlocked
+                        className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm ${!user.isActive
                             ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-500 hover:text-white'
                             : 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-500 hover:text-white'
                             }`}
                     >
-                        {user.isBlocked ? <ShieldCheck size={16} /> : <ShieldOff size={16} />}
-                        {user.isBlocked ? 'Unblock Account' : 'Block Account'}
+                        {!user.isActive ? <ShieldCheck size={16} /> : <ShieldOff size={16} />}
+                        {!user.isActive ? 'Restore Account' : 'Suspend Account'}
                     </button>
                 </div>
             </div>
@@ -127,7 +134,9 @@ const UserDetailPage = () => {
                                     </div>
                                     <div>
                                         <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Member Since</p>
-                                        <p className="text-sm font-bold text-footerBg">Jan 2024</p>
+                                        <p className="text-sm font-bold text-footerBg">
+                                            {new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -148,11 +157,9 @@ const UserDetailPage = () => {
                                             <span className="text-[9px] font-black uppercase tracking-widest bg-white px-2 py-0.5 rounded border border-gray-200">
                                                 {addr.type}
                                             </span>
-                                            {addr.isDefault && <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>}
                                         </div>
-                                        <p className="text-xs font-bold text-footerBg mb-1">{addr.fullName}</p>
                                         <p className="text-[10px] text-gray-400 font-medium leading-relaxed">
-                                            {addr.address}, {addr.city}, {addr.state} - {addr.pincode}
+                                            {addr.address}
                                         </p>
                                     </div>
                                 ))}
@@ -168,9 +175,9 @@ const UserDetailPage = () => {
                     {/* Activity Stats */}
                     <div className="grid grid-cols-3 gap-6">
                         {[
-                            { label: 'Orders', value: userOrders.length, icon: Package },
-                            { label: 'Spending', value: `₹${userOrders.reduce((acc, o) => acc + (o.amount || 0), 0).toLocaleString()}`, icon: IndianRupee },
-                            { label: 'Items Saved', value: (wishlist[id]?.length || 0), icon: Heart },
+                            { label: 'Total Rides', value: user.rideCount || 0, icon: Car },
+                            { label: 'Total Spent', value: `₹${(user.spentAmount || 0).toLocaleString()}`, icon: IndianRupee },
+                            { label: 'Join Date', value: new Date(user.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }), icon: Calendar },
                         ].map((stat, i) => (
                             <div key={i} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col items-center text-center">
                                 <div className={`bg-gray-50 text-footerBg p-3 rounded-2xl mb-3`}>
@@ -192,24 +199,24 @@ const UserDetailPage = () => {
                         </div>
                         <div className="divide-y divide-gray-50">
                             {userOrders.length > 0 ? userOrders.map((order) => (
-                                <div key={order.id} className="p-6 hover:bg-slate-50 transition-colors flex items-center justify-between group cursor-pointer text-left" onClick={() => navigate(`/admin/orders/${order.id}`)}>
+                                <div key={order._id} className="p-6 hover:bg-slate-50 transition-colors flex items-center justify-between group cursor-pointer text-left" onClick={() => navigate(`/admin/bookings/view/${order._id}`)}>
                                     <div className="flex items-center gap-4">
                                         <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 border border-gray-100">
-                                            <Package size={20} />
+                                            <Car size={20} />
                                         </div>
                                         <div>
-                                            <p className="text-xs font-bold text-footerBg">#{order.id?.slice(-8)}</p>
-                                            <p className="text-[10px] text-gray-400 font-medium">{(new Date(order.date)).toLocaleDateString()}</p>
+                                            <p className="text-xs font-bold text-footerBg">#{order.bookingRef}</p>
+                                            <p className="text-[10px] text-gray-400 font-medium">{(new Date(order.createdAt)).toLocaleDateString()}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-10">
                                         <div className="text-right">
-                                            <p className="text-sm font-black text-footerBg">₹{order.amount?.toLocaleString()}</p>
-                                            <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">{order.paymentMethod?.toUpperCase()}</p>
+                                            <p className="text-sm font-black text-footerBg">₹{order.fareDetails?.computedFare || '0'}</p>
+                                            <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">{order.tripSummary?.serviceType}</p>
                                         </div>
-                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${order.status === 'Delivered' ? 'bg-emerald-50 text-emerald-600' :
-                                            order.status === 'Processing' ? 'bg-blue-50 text-blue-600' :
-                                                'bg-amber-50 text-amber-600'
+                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${order.status === 'completed' ? 'bg-emerald-50 text-emerald-600' :
+                                            order.status === 'cancelled' ? 'bg-red-50 text-red-600' :
+                                                'bg-blue-50 text-blue-600'
                                             }`}>
                                             {order.status}
                                         </span>

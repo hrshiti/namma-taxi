@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../../lib/api';
-import { useCustomerAuth } from '../../../context/CustomerAuthContext';
+import { useAuth } from '../../../context/AuthContext';
 
 const CustomerLogin = () => {
-    const { loginCustomer } = useCustomerAuth();
+    const navigate = useNavigate();
+    const { login } = useAuth();
     const [step, setStep] = useState(1);
     const [phone, setPhone] = useState('');
     const [code, setCode] = useState('');
@@ -40,7 +42,10 @@ const CustomerLogin = () => {
             setLoading(true);
             setError('');
             const res = await api.post('/auth/customer/verify-otp', { phone, code });
-            loginCustomer(res.data.user, res.data.token);
+            if (res && res.data) {
+                login(res.data.user, res.data.token);
+                navigate('/user/profile');
+            }
         } catch (err) {
             setError(err.message || 'Invalid OTP');
         } finally {
